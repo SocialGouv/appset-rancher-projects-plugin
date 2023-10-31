@@ -32,6 +32,7 @@ const getClusterName = async (clusterId) => {
   return clusterName;
 };
 
+const excludeProjects = ["Default","System"]
 const listProjectsByClusters = async () => {
   const response = await axios.get(`${RANCHER_SERVER}/v3/projects`, {
     headers: { Authorization: `Bearer ${RANCHER_TOKEN}` },
@@ -39,6 +40,9 @@ const listProjectsByClusters = async () => {
   
   const clusters = {}
   for (const project of response.data.data) {
+    if(excludeProjects.includes(project.name)){
+      continue
+    }
     const clusterName = await getClusterName(project.clusterId);
     if (!clusters[clusterName]){
       clusters[clusterName] = []
