@@ -1,9 +1,61 @@
-const { exec } = require("child_process");
-const util = require("util");
-
 const express = require("express");
+const axios = require("axios");
+require("dotenv").config();
 
-const execAsync = util.promisify(exec);
+const RANCHER_SERVER = process.env.RANCHER_SERVER;
+const RANCHER_TOKEN = process.env.RANCHER_TOKEN;
+const API_TOKEN = process.env.API_TOKEN;
+
+if(!RANCHER_SERVER){
+  throw new Error(`missing required env var RANCHER_SERVER`);
+}
+if (!RANCHER_TOKEN) {
+  throw new Error(`missing required env var RANCHER_TOKEN`);
+}
+if (!API_TOKEN) {
+  throw new Error(`missing required env var API_TOKEN`);
+}
+
+const clusterCache = {};
+const getClusterName = async (clusterId) => {
+  if (clusterCache[clusterId]) {
+    return clusterCache[clusterId];
+  }
+  const response = await axios.get(
+    `${RANCHER_SERVER}/v3/clusters/${clusterId}`,
+    {
+      headers: { Authorization: `Bearer ${RANCHER_TOKEN}` },
+    }
+  );
+  const clusterName = response.data.name;
+  clusterCache[clusterId] = clusterName;
+  return clusterName;
+};
+
+const listProjectsByClusters = async () => {
+  const response = await axios.get(`${RANCHER_SERVER}/v3/projects`, {
+    headers: { Authorization: `Bearer ${RANCHER_TOKEN}` },
+  });
+  
+  const clusters = {}
+  for (const project of response.data.data) {
+    const clusterName = await getClusterName(project.clusterId);
+    if (!clusters[clusterName]){
+      clusters[clusterName] = []
+    }
+    clusters[clusterName].push({
+      projectName: project.name,
+      projectId: project.id,
+    })
+  }
+  const clusterList = Object.keys(clusters).map((cluster) => {
+    return {
+      cluster,
+      projects: clusters[cluster],
+    };
+  });
+  return clusterList;
+};
 
 const app = express();
 
@@ -14,13 +66,13 @@ app.use((req, res, next) => {
   if (
     authHeader &&
     authHeader.startsWith("Bearer ") &&
-    authHeader.split(" ")[1] === process.env.API_TOKEN
+    authHeader.split(" ")[1] === API_TOKEN
   ) {
     next();
     return;
   }
 
-  if (req.query.token === process.env.API_TOKEN) {
+  if (req.query.token === API_TOKEN) {
     next();
     return;
   }
@@ -28,25 +80,16 @@ app.use((req, res, next) => {
   return res.status(401).json({ error: "Unauthorized" });
 });
 
-const singleApplicationMode = process.env.SINGLE_APPLICATION_MODE === "true";
-
 app.use("/api/v1/getparams.execute", async (_req, res) => {
-  const { stdout, stderr } = await execAsync("kubectl get namespaces -o json");
-  if (stderr) {
-    console.error(`Error: ${stderr}`);
-    return res.status(500)
+  
+  let parameters
+  try {
+    parameters = await listProjectsByClusters();
+  } catch(err) {
+    console.error(`Error`, err);
+    return res.status(500);
   }
-  const stoudJson = JSON.parse(stdout);
-  const namespaces = stoudJson.items;
-  const projects = namespaces
-    .filter((namespace)=> namespace.metadata.name.startsWith("ci-"))
-    .map(namespace=>{
-      return {
-        name: namespace.metadata.name,
-        projectId: namespace.metadata.annotations?.["field.cattle.io/projectId"],
-      }
-    })
-  const parameters = singleApplicationMode ? [{projects}] : projects;
+
   const responseObject = {
     output: {
       parameters,

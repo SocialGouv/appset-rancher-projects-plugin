@@ -2,17 +2,15 @@ version: "3.8"
 
 services:
   server:
-    image: applicationset-ci-rancher-projects-plugin
+    image: appset-ci-rancher-projects-plugin
     restart: "no"
     build:
       context: .
       dockerfile: ./Dockerfile
-    volumes:
-      - ${KUBECONFIG:-~/.kube/config}:/tmp/kubeconfig:ro
     ports:
       - 3000:3000
     environment:
-      KUBECONFIG: /tmp/kubeconfig
       API_TOKEN: "1234"
-      SINGLE_APPLICATION_MODE: "false"
+      RANCHER_SERVER: "${RANCHER_SERVER:-}"
+      RANCHER_TOKEN: "${RANCHER_TOKEN:-}"
       

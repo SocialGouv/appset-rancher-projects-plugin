@@ -19,12 +19,12 @@ RUN apt-get update && \
   curl \
   && rm -rf /var/lib/apt/lists/*
 
-FROM downloader AS kubectl
-# renovate: datasource=github-tags depName=kubernetes/kubectl extractVersion=^kubernetes-(?<version>.+)$
-ARG KUBECTL_VERSION=1.27.1
-ENV KUBECTL_VERSION=$KUBECTL_VERSION
-RUN curl --fail -sL https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl > /usr/local/bin/kubectl \
-  && chmod +x /usr/local/bin/kubectl
+# FROM downloader AS kubectl
+# # renovate: datasource=github-tags depName=kubernetes/kubectl extractVersion=^kubernetes-(?<version>.+)$
+# ARG KUBECTL_VERSION=1.27.1
+# ENV KUBECTL_VERSION=$KUBECTL_VERSION
+# RUN curl --fail -sL https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl > /usr/local/bin/kubectl \
+#   && chmod +x /usr/local/bin/kubectl
 
 FROM downloader AS node-downloader
 ARG NODE_VERSION
@@ -53,7 +53,7 @@ RUN apt-get update && \
   && rm -rf /var/lib/apt/lists/*
 USER 1000
 
-COPY --from=kubectl /usr/local/bin/kubectl /usr/local/bin/kubectl
+# COPY --from=kubectl /usr/local/bin/kubectl /usr/local/bin/kubectl
 
 COPY --chown=1000:1000 yarn.lock .yarnrc.yml .pnp.* ./
 COPY --chown=1000:1000 .yarn .yarn
