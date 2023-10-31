@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   server:
-    image: appset-ci-rancher-projects-plugin
+    image: appset-rancher-projects-plugin
     restart: "no"
     build:
       context: .
