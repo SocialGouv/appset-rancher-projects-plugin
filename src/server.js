@@ -5,6 +5,7 @@ require("dotenv").config();
 const RANCHER_SERVER = process.env.RANCHER_SERVER;
 const RANCHER_TOKEN = process.env.RANCHER_TOKEN;
 const API_TOKEN = process.env.API_TOKEN;
+const ENABLE_CLUSTER_LIST = process.env.ENABLE_CLUSTER_LIST;
 
 if(!RANCHER_SERVER){
   throw new Error(`missing required env var RANCHER_SERVER`);
@@ -15,6 +16,10 @@ if (!RANCHER_TOKEN) {
 if (!API_TOKEN) {
   throw new Error(`missing required env var API_TOKEN`);
 }
+
+const enableClusterList = ENABLE_CLUSTER_LIST
+  ? JSON.parse(ENABLE_CLUSTER_LIST)
+  : null;
 
 const clusterCache = {};
 const getClusterName = async (clusterId) => {
@@ -44,8 +49,11 @@ const listProjectsByClusters = async () => {
       continue
     }
     const clusterName = await getClusterName(project.clusterId);
-    if (!clusters[clusterName]){
-      clusters[clusterName] = []
+    if (enableClusterList && !enableClusterList.includes(clusterName)) {
+      continue
+    }
+    if (!clusters[clusterName]) {
+      clusters[clusterName] = [];
     }
     clusters[clusterName].push({
       projectName: project.name,
